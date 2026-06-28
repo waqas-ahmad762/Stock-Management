@@ -34,7 +34,7 @@ export default async function AdminPage() {
   return (
     <>
       <AppHeader user={admin} />
-      <main className="animate-fade-up mx-auto w-full max-w-6xl flex-1 px-6 py-12">
+      <main className="animate-fade-up mx-auto w-full max-w-6xl flex-1 px-4 py-12 sm:px-6">
         <header className="mb-8">
           <h1 className="text-3xl font-bold tracking-tight">Admin · Users</h1>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">

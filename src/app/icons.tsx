@@ -6,7 +6,8 @@ function Svg({ className = "h-5 w-5", children }: IconProps & { children: ReactN
   return (
     <svg
       viewBox="0 0 24 24"
-      className={className}
+      // shrink-0 keeps icons from being squeezed in tight flex rows on mobile.
+      className={`shrink-0 ${className}`}
       fill="none"
       stroke="currentColor"
       strokeWidth="2"
