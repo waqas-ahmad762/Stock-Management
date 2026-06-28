@@ -12,9 +12,43 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+// Absolute base for OG/Twitter image URLs. Uses the Vercel production domain
+// when deployed; override with NEXT_PUBLIC_SITE_URL for a custom domain.
+// VERCEL_PROJECT_PRODUCTION_URL is a bare host (no scheme), so we add https://
+// when one is missing — otherwise `new URL()` below would throw in production.
+const rawSiteUrl =
+  process.env.NEXT_PUBLIC_SITE_URL ??
+  process.env.VERCEL_PROJECT_PRODUCTION_URL ??
+  "http://localhost:3000";
+const siteUrl = /^https?:\/\//.test(rawSiteUrl) ? rawSiteUrl : `https://${rawSiteUrl}`;
+
+const title = "Stocks Manager";
+const description =
+  "Track your PSX portfolio — live prices, profit / loss and dividends in one clean dashboard.";
+
 export const metadata: Metadata = {
-  title: "Stocks Manager",
-  description: "Track and manage your stock holdings.",
+  metadataBase: new URL(siteUrl),
+  title: {
+    default: title,
+    template: `%s · ${title}`,
+  },
+  description,
+  applicationName: title,
+  keywords: ["PSX", "Pakistan Stock Exchange", "stocks", "portfolio", "investments", "dividends"],
+  authors: [{ name: "Waqas Ahmad" }],
+  openGraph: {
+    type: "website",
+    siteName: title,
+    title,
+    description,
+    url: siteUrl,
+    locale: "en_US",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title,
+    description,
+  },
 };
 
 export default function RootLayout({
