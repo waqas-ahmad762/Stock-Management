@@ -27,6 +27,13 @@ export const WalletIcon = (p: IconProps) => (
   </Svg>
 );
 
+export const RefreshIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M21 12a9 9 0 1 1-2.64-6.36" />
+    <path d="M21 3v5h-5" />
+  </Svg>
+);
+
 export const BanknoteIcon = (p: IconProps) => (
   <Svg {...p}>
     <rect x="2" y="6" width="20" height="12" rx="2" />
