@@ -2,7 +2,7 @@
 export function Logo({ className = "h-9 w-9" }: { className?: string }) {
   return (
     <span
-      className={`inline-flex items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 text-white shadow-sm ${className}`}
+      className={`inline-flex shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 text-white shadow-sm ${className}`}
       aria-hidden="true"
     >
       <svg

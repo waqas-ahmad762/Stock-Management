@@ -21,10 +21,10 @@ export default async function DashboardPage() {
   return (
     <>
       <AppHeader user={user} />
-      <main className="animate-fade-up mx-auto w-full max-w-6xl flex-1 px-6 py-12">
+      <main className="animate-fade-up mx-auto w-full max-w-6xl flex-1 px-4 py-12 sm:px-6">
         <header className="mb-8 flex flex-wrap items-start justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 text-white shadow-sm">
+          <div className="flex min-w-0 items-center gap-3">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 text-white shadow-sm">
               <BarChartIcon className="h-6 w-6" />
             </span>
             <div>
