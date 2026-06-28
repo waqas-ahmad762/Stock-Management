@@ -13,7 +13,7 @@ export default async function ProfilePage() {
   return (
     <>
       <AppHeader user={user} />
-      <main className="animate-fade-up mx-auto w-full max-w-2xl flex-1 px-6 py-12">
+      <main className="animate-fade-up mx-auto w-full max-w-2xl flex-1 px-4 py-12 sm:px-6">
         <header className="mb-8 flex items-center gap-4">
           <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 text-2xl font-bold text-white shadow-md">
             {initial}
