@@ -43,6 +43,32 @@ export async function setLivePrice(
   );
 }
 
+/**
+ * Upserts many live prices for a user in a single round-trip (used when
+ * refreshing all holdings from PSX). Returns how many rows were written.
+ */
+export async function setLivePrices(
+  userId: string,
+  prices: Map<string, number>,
+): Promise<number> {
+  if (!ObjectId.isValid(userId) || prices.size === 0) return 0;
+  const owner = new ObjectId(userId);
+  const now = new Date();
+  const ops = [...prices]
+    .filter(([, price]) => Number.isFinite(price) && price >= 0)
+    .map(([name, price]) => ({
+      updateOne: {
+        filter: { userId: owner, name: name.trim().toUpperCase() },
+        update: { $set: { price, updatedAt: now } },
+        upsert: true,
+      },
+    }));
+  if (ops.length === 0) return 0;
+  const col = await livePricesCol();
+  const res = await col.bulkWrite(ops);
+  return res.upsertedCount + res.modifiedCount;
+}
+
 // --- Available cash (uninvested money set aside to invest) ------------------
 
 interface CashBalanceDoc {
@@ -73,6 +99,47 @@ export async function setCashBalance(userId: string, amount: number): Promise<vo
   await col.updateOne(
     { userId: new ObjectId(userId) },
     { $set: { amount: round2(amount), updatedAt: new Date() } },
+    { upsert: true },
+  );
+}
+
+// --- Live-price refresh throttle (once per day) ----------------------------
+
+/** Minimum gap between PSX price refreshes for a user. */
+export const PRICE_REFRESH_COOLDOWN_MS = 24 * 60 * 60 * 1000;
+
+interface PriceRefreshDoc {
+  userId: ObjectId;
+  lastRefreshAt: Date;
+}
+
+async function priceRefreshCol(): Promise<Collection<PriceRefreshDoc>> {
+  const db = await getDb();
+  const col = db.collection<PriceRefreshDoc>("priceRefreshes");
+  await col.createIndex({ userId: 1 }, { unique: true });
+  return col;
+}
+
+/**
+ * The time the user may next refresh live prices, or `null` if they can do it
+ * right now (never refreshed, or the 24h cooldown has elapsed).
+ */
+export async function getNextRefreshAllowedAt(userId: string): Promise<Date | null> {
+  if (!ObjectId.isValid(userId)) return null;
+  const col = await priceRefreshCol();
+  const doc = await col.findOne({ userId: new ObjectId(userId) });
+  if (!doc) return null;
+  const next = new Date(doc.lastRefreshAt.getTime() + PRICE_REFRESH_COOLDOWN_MS);
+  return next.getTime() > Date.now() ? next : null;
+}
+
+/** Stamps "the user just refreshed now", starting a fresh 24h cooldown. */
+export async function recordPriceRefresh(userId: string): Promise<void> {
+  if (!ObjectId.isValid(userId)) return;
+  const col = await priceRefreshCol();
+  await col.updateOne(
+    { userId: new ObjectId(userId) },
+    { $set: { lastRefreshAt: new Date() } },
     { upsert: true },
   );
 }
@@ -177,4 +244,22 @@ export async function getPortfolio(userId: string): Promise<Portfolio> {
   };
 
   return { rows, totals, cashBalance };
+}
+
+/**
+ * Total profit/loss per user — the same figure each user sees as their
+ * dashboard total (live prices, with the last-transaction-price fallback). The
+ * per-user aggregations run in parallel. Pass only the ids you need (e.g.
+ * non-admins who actually have transactions) to keep it cheap.
+ */
+export async function profitLossByUser(
+  userIds: string[],
+): Promise<Map<string, number>> {
+  const entries = await Promise.all(
+    userIds.map(async (id) => {
+      const { totals } = await getPortfolio(id);
+      return [id, totals.totalProfitLoss] as const;
+    }),
+  );
+  return new Map(entries);
 }
