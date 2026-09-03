@@ -1,12 +1,13 @@
 import { redirect } from "next/navigation";
 import { listStocks, listStockNames } from "@/lib/stocks";
+import { getPortfolio } from "@/lib/portfolio";
 import { requireUser } from "@/lib/auth";
 import { UserRole } from "@/lib/user-types";
-import { money } from "@/lib/format";
 import { AddStockForm } from "../add-stock-form";
 import { AppHeader } from "../app-header";
 import { TransactionsTable } from "./transactions-table";
 import { ImportExport } from "./import-export";
+import { CashFlowSummaryCard } from "./cash-flow-summary";
 import { ReceiptIcon, PlusIcon, EmptyPortfolioArt } from "../icons";
 
 // Transactions are read from the database on every request.
@@ -17,11 +18,11 @@ export default async function TransactionsPage() {
   // The admin manages users only and has no personal portfolio.
   if (user.role === UserRole.Admin) redirect("/admin");
 
-  const [stocks, names] = await Promise.all([
+  const [stocks, names, { flows }] = await Promise.all([
     listStocks(user.id),
     listStockNames(user.id),
+    getPortfolio(user.id),
   ]);
-  const netCashFlow = stocks.reduce((sum, s) => sum + s.cashFlow, 0);
   // Same UTC "today" the server uses to validate, so the picker's max matches.
   const today = new Date().toISOString().slice(0, 10);
 
@@ -59,24 +60,10 @@ export default async function TransactionsPage() {
                 ({stocks.length})
               </span>
             </h2>
-            <div className="flex flex-wrap items-center gap-4">
-              {stocks.length > 0 && (
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                  Net cash flow:{" "}
-                  <span
-                    className={
-                      netCashFlow < 0
-                        ? "font-semibold text-red-600 dark:text-red-400"
-                        : "font-semibold text-green-600 dark:text-green-400"
-                    }
-                  >
-                    {money(netCashFlow)}
-                  </span>
-                </p>
-              )}
-              <ImportExport />
-            </div>
+            <ImportExport />
           </div>
+
+          {stocks.length > 0 && <CashFlowSummaryCard flows={flows} />}
 
           {stocks.length === 0 ? (
             <div className="flex flex-col items-center rounded-2xl border border-dashed border-gray-300 px-6 py-10 text-center dark:border-gray-700">
