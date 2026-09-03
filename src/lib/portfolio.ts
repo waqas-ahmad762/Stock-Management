@@ -156,9 +156,29 @@ export interface PortfolioRow {
   hasLivePrice: boolean; // true if the user set it, false if defaulted
 }
 
+/**
+ * Money in and out, split by what actually happened, so a single "net" figure
+ * is never left to explain itself.
+ *
+ * `netPosition` is what the user asks of the portfolio: what I spent minus
+ * what I got back — the shares I still hold (at live prices), the cash from
+ * anything I sold, and the dividends I was paid. Positive means still down
+ * that much; negative means ahead. It is the mirror image of the dashboard's
+ * Total Profit / Loss.
+ */
+export interface CashFlowSummary {
+  spent: number; // total paid on Buys, commission included
+  soldProceeds: number; // net cash received from Sells
+  dividends: number; // net cash received as Dividends
+  holdingsValue: number; // market value of shares still held
+  netCashFlow: number; // soldProceeds + dividends − spent (cash actually moved)
+  netPosition: number; // spent − (holdingsValue + soldProceeds + dividends)
+}
+
 export interface Portfolio {
   rows: PortfolioRow[];
   cashBalance: number; // uninvested cash set aside to invest
+  flows: CashFlowSummary;
   totals: {
     totalInvestment: number;
     totalCurrentValue: number;
@@ -197,8 +217,15 @@ export async function getPortfolio(userId: string): Promise<Portfolio> {
     seen: boolean;
   }
   const groups = new Map<string, Group>();
+  let spent = 0;
+  let soldProceeds = 0;
+  let dividends = 0;
 
   for (const s of stocks) {
+    if (s.type === TransactionType.Buy) spent += s.totalPrice;
+    else if (s.type === TransactionType.Sell) soldProceeds += s.totalPrice;
+    else dividends += s.totalPrice;
+
     let g = groups.get(s.name);
     if (!g) {
       g = { name: s.name, buyQty: 0, sellQty: 0, netInvested: 0, lastPrice: 0, seen: false };
@@ -236,14 +263,24 @@ export async function getPortfolio(userId: string): Promise<Portfolio> {
 
   const totalInvestment = round2(rows.reduce((s, r) => s + r.totalInvestment, 0));
   const totalProfitLoss = round2(rows.reduce((s, r) => s + r.profitLoss, 0));
+  const totalCurrentValue = round2(rows.reduce((s, r) => s + r.currentValue, 0));
   const totals = {
     totalInvestment,
-    totalCurrentValue: round2(rows.reduce((s, r) => s + r.currentValue, 0)),
+    totalCurrentValue,
     totalProfitLoss,
     returnPct: pctOf(totalProfitLoss, totalInvestment),
   };
 
-  return { rows, totals, cashBalance };
+  const flows: CashFlowSummary = {
+    spent: round2(spent),
+    soldProceeds: round2(soldProceeds),
+    dividends: round2(dividends),
+    holdingsValue: totalCurrentValue,
+    netCashFlow: round2(soldProceeds + dividends - spent),
+    netPosition: round2(spent - (totalCurrentValue + soldProceeds + dividends)),
+  };
+
+  return { rows, totals, cashBalance, flows };
 }
 
 /**
